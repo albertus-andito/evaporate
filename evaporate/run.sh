@@ -13,7 +13,7 @@ python run_profiler.py \
     --num_top_k_scripts 10 \
     --train_size 10 \
     --combiner_mode ws \
-    --use_dynamic_backoff True \
+    --use_dynamic_backoff \
     --KEYS ${keys}
 
 # evaporate code open ie
