@@ -436,8 +436,9 @@ def get_experiment_args():
 
     parser.add_argument(
         "--use_dynamic_backoff",
-        type=bool,
-        default=True,
+        # type=bool,
+        # default=True,
+        action='store_true',
         help="Whether to generate functions or do Evaporate-Direct",
     )
 
