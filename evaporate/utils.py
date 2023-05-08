@@ -203,7 +203,7 @@ def get_manifest_session(
         **cache_params,
     )
     
-    params = manifest.client_pool.get_client().get_model_params()
+    params = manifest.client_pool.get_current_client().get_model_params()
     model_name = params["model_name"]
     if "engine" in params:
         model_name += f"_{params['engine']}"
