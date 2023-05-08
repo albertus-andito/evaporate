@@ -400,7 +400,8 @@ def get_experiment_args():
     parser.add_argument(
         "--do_end_to_end", 
         type=bool,
-        default=True,
+        # default=True,
+        action='store_true',
         help="True for OpenIE, False for ClosedIE"
     )
 
