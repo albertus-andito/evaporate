@@ -28,6 +28,15 @@ def get_data_lake_info(args, data_lake, DATA_DIR = "/data/evaporate"):
         full_file_groups = file_groups.copy()
         extractions_file = args.gold_extractions_file
         parser = "txt"
+    elif "swde" in data_lake:
+        DATA_DIR = args.data_dir
+        file_groups = os.listdir(DATA_DIR)
+        if not DATA_DIR.endswith("/"):
+            DATA_DIR += "/"
+        file_groups = [f"{DATA_DIR}{file_group}" for file_group in file_groups if not file_group.startswith(".")]
+        full_file_groups = file_groups.copy()
+        extractions_file = args.gold_extractions_file
+        parser = "html"
 
     return file_groups, extractions_file, parser, full_file_groups
 

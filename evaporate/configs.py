@@ -64,6 +64,14 @@ def get_args(database_name, BASE_DATA_DIR = "../data/evaporate/"):
             "gold_extractions_file": os.path.join(BASE_DATA_DIR, "ground_truth/fda_510ks_gold_extractions.json"),
             "topic": "fda 510k device premarket notifications",
         },
+        "swde_movie_hollywood": {
+            "data_dir": os.path.join(BASE_DATA_DIR, "movie-hollywood(2000)"),
+            "database_name": "swde_movie_hollywood",
+            "cache_dir": ".cache/swde_movie_hollywood/",
+            "generative_index_path": os.path.join(BASE_DATA_DIR, "generative_indexes/swde_movie_hollywood/"),
+            "gold_extractions_file": os.path.join(BASE_DATA_DIR, "ground_truth/swde_movie_hollywood_gold_extractions.json"),
+            "topic": "SWDE movie Hollywood",
+        },
     }
 
     args = parser.parse_args(args=[])
