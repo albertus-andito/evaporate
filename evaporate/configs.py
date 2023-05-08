@@ -1,7 +1,7 @@
 import argparse
 import os
 
-def get_args(database_name, BASE_DATA_DIR = "~/evaporate/data/evaporate/"):
+def get_args(database_name, BASE_DATA_DIR = "../data/evaporate/"):
     
     parser = argparse.ArgumentParser(
         "LLM explorer.",
