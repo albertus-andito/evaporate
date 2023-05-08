@@ -73,8 +73,9 @@ def set_profiler_args(profiler_args):
 
     parser.add_argument(
         "--use_dynamic_backoff",
-        type=bool,
-        default=True,
+        # type=bool,
+        # default=True,
+        action='store_true',
         help="Whether to do the function generation workflow or directly extract from chunks",
     )
 
