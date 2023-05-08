@@ -448,20 +448,20 @@ def main():
     profiler_args = {}
     profiler_args = set_profiler_args(profiler_args)
 
-    model_dict = {
-        'MODELS': ["text-davinci-003"],
-        'EXTRACTION_MODELS':  ["text-davinci-003"],  
-        'GOLD_KEY': "text-davinci-003",
-    }
-    # Example of how to use a locally-hosted FM
     # model_dict = {
-    #     'MODELS': [" EleutherAI/gpt-j-6B"],
-    #     'EXTRACTION_MODELS': [" EleutherAI/gpt-j-6B"],
-    #     'GOLD_KEY': " EleutherAI/gpt-j-6B",
-    #     'MODEL2URL': {
-    #         " EleutherAI/gpt-j-6B": "http://127.0.0.1:5000"
-    #     },
+    #     'MODELS': ["text-davinci-003"],
+    #     'EXTRACTION_MODELS':  ["text-davinci-003"],
+    #     'GOLD_KEY': "text-davinci-003",
     # }
+    # Example of how to use a locally-hosted FM
+    model_dict = {
+        'MODELS': [" EleutherAI/gpt-j-6B"],
+        'EXTRACTION_MODELS': [" EleutherAI/gpt-j-6B"],
+        'GOLD_KEY': " EleutherAI/gpt-j-6B",
+        'MODEL2URL': {
+            " EleutherAI/gpt-j-6B": "http://127.0.0.1:5000"
+        },
+    }
             
     for k, v in model_dict.items():
         setattr(profiler_args, k, v)
