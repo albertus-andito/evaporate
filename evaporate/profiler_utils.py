@@ -288,7 +288,8 @@ def get_html_parse(content, chunk_size=5000, mode="train", remove_tables=False, 
     current_div = []
     current_length = 0
     max_length = chunk_size
-    join_str = " " if use_raw_text else "\n"
+    # join_str = " " if use_raw_text else "\n"
+    join_str = " "
     for div in clean_flattened_divs:
         str_div = str(div)
         len_div = len(str_div)
