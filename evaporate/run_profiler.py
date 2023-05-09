@@ -466,11 +466,11 @@ def main():
     # }
     # Example of how to use a locally-hosted FM
     model_dict = {
-        'MODELS': [" huggyllama/llama-7b"],
-        'EXTRACTION_MODELS': [" huggyllama/llama-7b"],
-        'GOLD_KEY': " huggyllama/llama-7b",
+        'MODELS': [" EleutherAI/gpt-j-6B"],
+        'EXTRACTION_MODELS': [" EleutherAI/gpt-j-6B"],
+        'GOLD_KEY': " EleutherAI/gpt-j-6B",
         'MODEL2URL': {
-            " huggyllama/llama-7b": "http://127.0.0.1:5000"
+            " EleutherAI/gpt-j-6B": "http://127.0.0.1:5000"
         },
     }
             
