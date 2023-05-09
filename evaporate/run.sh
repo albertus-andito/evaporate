@@ -3,7 +3,7 @@ keys="PLACEHOLDER" # INSERT YOUR API KEY(S) HERE
 # evaporate direct closed ie
 python run_profiler.py \
     --data_lake swde_movie_hollywood \
-    --train_size 2000 \
+    --train_size 10 \
     --KEYS ${keys}
 
 ## evaporate code closed ie

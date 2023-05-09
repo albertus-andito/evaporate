@@ -548,6 +548,7 @@ def get_all_extractions(
         MODELS,
         GOLD_KEY,
         args,
+        profile_args,
         use_qa_model=False,
         overwrite_cache=False,
     ):
@@ -573,27 +574,29 @@ def get_all_extractions(
             print(f"Not applying {model} extractions")
             return 0, 0, total_tokens_prompted
 
-    manifest_session = manifest_sessions[GOLD_KEY]
-    functions, function_promptsource, num_toks = get_functions(
-        file2chunks, 
-        sample_files, 
-        all_extractions[GOLD_KEY],
-        attribute, 
-        manifest_session,
-        overwrite_cache=overwrite_cache,
-    )
-    total_tokens_prompted += num_toks
-
     function_dictionary = defaultdict(dict)
-    for fn_key, fn in functions.items():
-        all_extractions[fn_key], num_function_errors = apply_final_profiling_functions(
-            file2contents, 
+    if profile_args.use_dynamic_backoff:
+        manifest_session = manifest_sessions[GOLD_KEY]
+        functions, function_promptsource, num_toks = get_functions(
+            file2chunks,
             sample_files,
-            fn,
+            all_extractions[GOLD_KEY],
             attribute,
+            manifest_session,
+            overwrite_cache=overwrite_cache,
         )
-        function_dictionary[fn_key]['function'] = fn
-        function_dictionary[fn_key]['promptsource'] = function_promptsource[fn_key]
+        total_tokens_prompted += num_toks
+
+        for fn_key, fn in functions.items():
+            all_extractions[fn_key], num_function_errors = apply_final_profiling_functions(
+                file2contents,
+                sample_files,
+                fn,
+                attribute,
+            )
+            function_dictionary[fn_key]['function'] = fn
+            function_dictionary[fn_key]['promptsource'] = function_promptsource[fn_key]
+
     return all_extractions, function_dictionary, total_tokens_prompted
 
 
@@ -618,6 +621,7 @@ def run_profiler(run_string, args, file2chunks, file2contents, sample_files, gro
         profiler_args.EXTRACTION_MODELS,
         profiler_args.GOLD_KEY,
         args,
+        profiler_args,
         use_qa_model=profiler_args.use_qa_model,
         overwrite_cache=profiler_args.overwrite_cache,
     )
@@ -625,102 +629,106 @@ def run_profiler(run_string, args, file2chunks, file2contents, sample_files, gro
     if not all_extractions:
         return total_tokens_prompted, 0
 
-    # SCORE: Determine a set of functions to utilize for the full data lake.
-    all_metrics, key2golds, num_toks = evaluate(
-        all_extractions,
-        profiler_args.GOLD_KEY,
-        field=attribute,
-        manifest_session=manifest_sessions[profiler_args.GOLD_KEY], 
-        overwrite_cache=profiler_args.overwrite_cache,
-        combiner_mode=profiler_args.combiner_mode,
-        extraction_fraction_thresh=profiler_args.extraction_fraction_thresh,
-        use_abstension=profiler_args.use_abstension,
-    )
-    total_tokens_prompted += num_toks
+    if profiler_args.use_dynamic_backoff:
 
-    selected_keys = get_topk_scripts_per_field(
-        all_metrics,
-        function_dictionary,
-        all_extractions,
-        gold_key = profiler_args.GOLD_KEY, 
-        k=profiler_args.num_top_k_scripts,
-        do_end_to_end=profiler_args.do_end_to_end,
-        combiner_mode=profiler_args.combiner_mode,
-    )
-
-    if not selected_keys and profiler_args.do_end_to_end:
-        print(f"Removing {file_attribute}")
-        if os.path.exists(save_path):
-            os.remove(save_path)
-        return total_tokens_prompted, 0
-
-    # APPLY: Run the best performing functions on the data lake.
-    print(f"Apply the scripts to the data lake and save the metadata. Taking the top {profiler_args.num_top_k_scripts} scripts per field.")
-    top_k_extractions, num_toks = apply_final_ensemble(
-        group_files,
-        file2chunks,
-        file2contents,
-        selected_keys,
-        all_metrics,
-        attribute,
-        function_dictionary,
-        data_lake=args.data_lake,
-        manifest_sessions=manifest_sessions,
-        function_cache=True,
-        MODELS=profiler_args.EXTRACTION_MODELS,
-        overwrite_cache=profiler_args.overwrite_cache,
-        do_end_to_end=profiler_args.do_end_to_end,
-    )
-    total_tokens_prompted += num_toks
-
-    file2metadata, num_toks = combine_extractions(
-        args,
-        top_k_extractions, 
-        all_metrics, 
-        combiner_mode=profiler_args.combiner_mode,
-        train_extractions=all_extractions,
-        attribute=attribute, 
-        gold_key = profiler_args.GOLD_KEY,
-        extraction_fraction_thresh=profiler_args.extraction_fraction_thresh,
-    )
-    total_tokens_prompted += num_toks
-
-    # FINAL CHECK: Ensure that the metadata is valid (Skip this for ClosedIE).
-    if profiler_args.do_end_to_end:
-        keep_attribute, num_toks = check_remove_attribute(
-            file2metadata, 
-            attribute, 
-            args.topic, 
-            train_extractions=key2golds,
-            manifest_session=manifest_sessions[profiler_args.GOLD_KEY], 
+        # SCORE: Determine a set of functions to utilize for the full data lake.
+        all_metrics, key2golds, num_toks = evaluate(
+            all_extractions,
+            profiler_args.GOLD_KEY,
+            field=attribute,
+            manifest_session=manifest_sessions[profiler_args.GOLD_KEY],
             overwrite_cache=profiler_args.overwrite_cache,
-            all_metrics=all_metrics,
+            combiner_mode=profiler_args.combiner_mode,
+            extraction_fraction_thresh=profiler_args.extraction_fraction_thresh,
+            use_abstension=profiler_args.use_abstension,
         )
         total_tokens_prompted += num_toks
-        if not keep_attribute:
+
+        selected_keys = get_topk_scripts_per_field(
+            all_metrics,
+            function_dictionary,
+            all_extractions,
+            gold_key = profiler_args.GOLD_KEY,
+            k=profiler_args.num_top_k_scripts,
+            do_end_to_end=profiler_args.do_end_to_end,
+            combiner_mode=profiler_args.combiner_mode,
+        )
+
+        if not selected_keys and profiler_args.do_end_to_end:
             print(f"Removing {file_attribute}")
             if os.path.exists(save_path):
                 os.remove(save_path)
             return total_tokens_prompted, 0
 
+        # APPLY: Run the best performing functions on the data lake.
+        print(f"Apply the scripts to the data lake and save the metadata. Taking the top {profiler_args.num_top_k_scripts} scripts per field.")
+        top_k_extractions, num_toks = apply_final_ensemble(
+            group_files,
+            file2chunks,
+            file2contents,
+            selected_keys,
+            all_metrics,
+            attribute,
+            function_dictionary,
+            data_lake=args.data_lake,
+            manifest_sessions=manifest_sessions,
+            function_cache=True,
+            MODELS=profiler_args.EXTRACTION_MODELS,
+            overwrite_cache=profiler_args.overwrite_cache,
+            do_end_to_end=profiler_args.do_end_to_end,
+        )
+        total_tokens_prompted += num_toks
+
+        file2metadata, num_toks = combine_extractions(
+            args,
+            top_k_extractions,
+            all_metrics,
+            combiner_mode=profiler_args.combiner_mode,
+            train_extractions=all_extractions,
+            attribute=attribute,
+            gold_key = profiler_args.GOLD_KEY,
+            extraction_fraction_thresh=profiler_args.extraction_fraction_thresh,
+        )
+        total_tokens_prompted += num_toks
+
+        # FINAL CHECK: Ensure that the metadata is valid (Skip this for ClosedIE).
+        if profiler_args.do_end_to_end:
+            keep_attribute, num_toks = check_remove_attribute(
+                file2metadata,
+                attribute,
+                args.topic,
+                train_extractions=key2golds,
+                manifest_session=manifest_sessions[profiler_args.GOLD_KEY],
+                overwrite_cache=profiler_args.overwrite_cache,
+                all_metrics=all_metrics,
+            )
+            total_tokens_prompted += num_toks
+            if not keep_attribute:
+                print(f"Removing {file_attribute}")
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                return total_tokens_prompted, 0
+
     try:
         with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_all_extractions.json", "w") as f:
             json.dump(all_extractions, f)
 
-        with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_functions.json", "w") as f:
-            json.dump(function_dictionary, f)
+        if profiler_args.use_dynamic_backoff:
 
-        with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_all_metrics.json", "w") as f:
-            json.dump(all_metrics, f)
+            with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_functions.json", "w") as f:
+                json.dump(function_dictionary, f)
 
-        with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_top_k_keys.json", "w") as f:
-            json.dump(selected_keys, f)
+            with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_all_metrics.json", "w") as f:
+                json.dump(all_metrics, f)
 
-        with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_file2metadata.json", "w") as f:
-            json.dump(file2metadata, f)
+            with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_top_k_keys.json", "w") as f:
+                json.dump(selected_keys, f)
 
-        with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_top_k_extractions.json", "w") as f:
-            json.dump(top_k_extractions, f)
+            with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_file2metadata.json", "w") as f:
+                json.dump(file2metadata, f)
+
+            with open(f"{args.generative_index_path}/{run_string}_{file_attribute}_top_k_extractions.json", "w") as f:
+                json.dump(top_k_extractions, f)
 
         print(f"Save path: {args.generative_index_path}/{run_string}_{file_attribute}_all_extractions.json")
         return total_tokens_prompted, 1
